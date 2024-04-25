@@ -28,12 +28,12 @@ int main() {
   struct sockaddr_in server;
   unsigned char *p;
 
-  // creating my_socket, with:
+  // creating sockfd, with:
   // socket family AF_INET ipv4 sockets
   // socket type SOCK_STREAM connection oriented sockets
   // 0 is the default protocol for AF_INET and SOCK_STREAM (TCP)
-  int my_socket = socket(AF_INET, SOCK_STREAM, 0);
-  if (my_socket == -1) {
+  int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+  if (sockfd == -1) {
     printf("Errno = %d (%d)\n", errno, EAFNOSUPPORT);
     perror("Socket fallita:");
     return 1;
@@ -45,7 +45,7 @@ int main() {
   p[1] = 250;
   p[2] = 187;
   p[3] = 196;  // 142.250.187.196
-  t = connect(my_socket, (struct sockaddr *)&server, sizeof(struct sockaddr_in));
+  t = connect(sockfd, (struct sockaddr *)&server, sizeof(struct sockaddr_in));
   if (t == -1) {
     perror("Connect fallita");
     return 1;
@@ -54,13 +54,13 @@ int main() {
   // writing the HTTP request
   char *request = "GET / HTTP/1.1\r\n\r\n";
   // writing the request to the socket
-  write(my_socket, request, strlen(request));
+  write(sockfd, request, strlen(request));
   
   // assign the address of hbuf
   headers[0].name = hbuf;
 
   // we do a read on the socket of the element of the buffer
-  for (j = 0, i = 0; read(my_socket, hbuf + i, 1); i++) {
+  for (j = 0, i = 0; read(sockfd, hbuf + i, 1); i++) {
     // if we find : we have to put the pointer to the next character and
     // substitute the : with 0 the first : are those which determine the
     // instantiation of the value
@@ -90,7 +90,7 @@ int main() {
   if (len == 0) len = 4;
 
   // int len = 60000;
-  for (i = 0; (t = read(my_socket, response + i, len - i)); i += t);
+  for (i = 0; (t = read(sockfd, response + i, len - i)); i += t);
   // sleep(1);
   response[i] = 0;
   printf("%s\n", response);
