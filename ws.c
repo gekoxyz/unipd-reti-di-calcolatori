@@ -65,12 +65,11 @@ int main() {
 
   printf("Server running on port %d\n", SERVER_PORT);
 
-  int len = sizeof(struct sockaddr);
-  int client_addr;
-
   while (1) {
-    client_addr = accept(sockfd, (struct sockaddr *)&remote, &len);
-    if (client_addr == SOCKET_ERROR) {
+    struct sockaddr_in client_addr;
+    socklen_t client_addr_size = sizeof(client_addr);
+    int clientfd = accept(sockfd, (struct sockaddr *)&client_addr, &client_addr_size);
+    if (clientfd == SOCKET_ERROR) {
       perror("Accept fallita");
       return 1;
     }
@@ -78,7 +77,7 @@ int main() {
     if (fork() == 0) {
       char *commandline = headers[0].name = hbuf;
       // parsing the HTTP request to read all the headers and remove CRLFs
-      for (j = 0, i = 0; read(client_addr, hbuf + i, 1); i++) {
+      for (j = 0, i = 0; read(clientfd, hbuf + i, 1); i++) {
         if ((hbuf[i] == ':') && (headers[j].value == NULL)) {
           hbuf[i] = 0;
           headers[j].value = &hbuf[i + 1];
@@ -95,69 +94,53 @@ int main() {
         printf("%s --> %s\n", headers[i].name, headers[i].value);
       }
 
-      // parsing the request sequentially, at every space i put a char 0 (the null terminator).
-      // GET / HTTP/1.1\r\n\r\n
-      // parsing the method (GET, POST, HEAD...)
       char *method = commandline;
-      for (i = 0; commandline[i] != ' '; i++) {
-      }
+      for (i = 0; commandline[i] != ' '; i++)
+        ;
       commandline[i] = 0;
       i++;
       // parsing the filename (index.html typically)
       char *filename = commandline + i;
-      for (; commandline[i] != ' '; i++);
+      for (; commandline[i] != ' '; i++)
+        ;
       commandline[i] = 0;
       i++;
       // parsing the HTTP version (HTTP/1.1)
       char *ver = commandline + i;
-      for (; commandline[i] != 0; i++);
+      for (; commandline[i] != 0; i++)
+        ;
       commandline[i] = 0;
       i++;
       printf("Method = %s, URI = %s, VER = %s \n", method, filename, ver);
-
-      // if (access(filename[1], F_OK) == -1) {
-      //   sprintf(response, "HTTP/1.1 404 NOT FOUND\r\nConnection:close\r\n\r\n");
-      //   // writing the header
-      //   write(client_addr, response, strlen(response));
-      //   filename[1] = "404.html";
-      // } else {
-      //   sprintf(response, "HTTP/1.1 200 OK\r\nConnection:close\r\n\r\n");
-      //   // writing the header
-      //   write(client_addr, response, strlen(response));
-      // }
-      // fin = fopen(filename + 1, "r");
-      // // writing the body
-      // while (!feof(fin)) {
-      //   fread(entity, 1, 1000, fin);
-      //   write(client_addr, entity, 1000);
-      // }
-      // fclose(fin);
-      // close(client_addr);
 
       // +1 is to remove the / at the beginning of /filename.html
       fin = fopen(filename + 1, "r");
       // if i don't find the file i return 404 file not found
       if (fin == NULL) {
-        sprintf(response, "HTTP/1.1 404 NOT FOUND\r\nConnection:close\r\n\r\n"); // TODO: ADD 404.html
+        sprintf(response, "HTTP/1.1 404 NOT FOUND\r\nConnection:close\r\n\r\n");  // TODO: ADD 404.html
         // writing the header
-        write(client_addr, response, strlen(response));
-        close(client_addr);
-        exit(1);
-      }
-      sprintf(response, "HTTP/1.1 200 OK\r\nConnection:close\r\n\r\n");
-      // writing the header
-      write(client_addr, response, strlen(response));
-      // writing the body
-      while (!feof(fin)) {
-        fread(entity, 1, 1000, fin);
-        write(client_addr, entity, 1000);
+        write(clientfd, response, strlen(response));
+        fin = fopen("404.html", "r");
+        // writing the body
+        while (!feof(fin)) {
+          fread(entity, 1, 1000, fin);
+          write(clientfd, entity, 1000);
+        }
+      } else {
+        sprintf(response, "HTTP/1.1 200 OK\r\nConnection:close\r\n\r\n");
+        // writing the header
+        write(clientfd, response, strlen(response));
+        // writing the body
+        while (!feof(fin)) {
+          fread(entity, 1, 1000, fin);
+          write(clientfd, entity, 1000);
+        }
       }
       fclose(fin);
-      close(client_addr);
+      close(clientfd);
       exit(-1);
-
     } else {
-      close(client_addr);
+      close(clientfd);
       continue;
     }
   }
