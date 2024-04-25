@@ -22,7 +22,6 @@ struct sockaddr_in remote;
 
 int main() {
   FILE *fin;
-  char *method, *filename, *ver;
   char request[3001];
   char response[3001];
   int i, j;
@@ -96,28 +95,26 @@ int main() {
         printf("%s --> %s\n", headers[i].name, headers[i].value);
       }
 
-      // TODO: method, filename, ver AS SEPARATE VARIABLES
       // parsing the request sequentially, at every space i put a char 0 (the null terminator).
       // GET / HTTP/1.1\r\n\r\n
       // parsing the method (GET, POST, HEAD...)
-      method = commandline;
+      char *method = commandline;
       for (i = 0; commandline[i] != ' '; i++) {
       }
       commandline[i] = 0;
       i++;
       // parsing the filename (index.html typically)
-      filename = commandline + i;
+      char *filename = commandline + i;
       for (; commandline[i] != ' '; i++);
       commandline[i] = 0;
       i++;
       // parsing the HTTP version (HTTP/1.1)
-      ver = commandline + i;
+      char *ver = commandline + i;
       for (; commandline[i] != 0; i++);
       commandline[i] = 0;
       i++;
       printf("Method = %s, URI = %s, VER = %s \n", method, filename, ver);
 
-      // TODO: check if this is correct
       // if (access(filename[1], F_OK) == -1) {
       //   sprintf(response, "HTTP/1.1 404 NOT FOUND\r\nConnection:close\r\n\r\n");
       //   // writing the header
