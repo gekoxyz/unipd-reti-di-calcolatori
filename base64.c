@@ -13,7 +13,6 @@ static char encoding_table[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
 
 char* base64_encode(char* input) {
   unsigned char bits[strlen(input)*8];
-  unsigned char substr[7];
 
   int k = 0;
   printf("\n");
@@ -36,6 +35,18 @@ char* base64_encode(char* input) {
 
   printf("starting bits to dec conversion\n");
 
+  unsigned char subbits[0];
+  int start = 0;
+
+  for (int i = start; i <= start + 6; i++) {
+    subbits[i - start] = bits[i];
+  }
+
+  for (int i = 0; i < 7; i++) {
+    printf("%d", subbits[i]);
+  }
+  printf("\n");
+
   // int decimal_values[(strlen(input)*8)/6 + 1]; // array to store decimal values
   // int length = sizeof(decimal_values) / sizeof(decimal_values[0]);
   
@@ -43,20 +54,8 @@ char* base64_encode(char* input) {
   // for (int i = 0; i < length; i++) {
   //   printf("%d -> %d\n", i, decimal_values[i]);
   // }
-  
-  printf("\n");
+
   return "output";
-}
-
-void convertToDecimal(const unsigned char *bits, int bitsLength, int *decimalValues) {
-    int i, j;
-    unsigned char mask = 0x3F; // Mask to extract 6 bits (00111111 in binary)
-
-    for (i = 0, j = 0; i < bitsLength; i += 6, j++) {
-        unsigned char chunk = bits[i / 8] >> (i % 8); // Shift to align with the current byte
-        chunk &= mask; // Apply mask to extract 6 bits
-        decimalValues[j] = chunk; // Store the decimal value
-    }
 }
 
 int main() {
