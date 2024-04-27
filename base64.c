@@ -36,11 +36,11 @@ char* base64_encode(char* input) {
   int size = ((4 * strlen(input) / 3) + 3) & ~3;
 
   char* output = malloc(size);
-  uint8_t bits[size * 8];
+  unsigned char bits[size * 8];
 
   // convert input to bits
   int k = 0;
-  for (int i = 0; i < strlen(input); i++) {
+  for (int i = 0; i < size; i++) {
     for (int j = 7; j >= 0; j--) {
       printf("%d", (((unsigned char)input[i] >> j) & 1));  // print each bit
       bits[k] = (((unsigned char)input[i] >> j) & 1);
@@ -49,7 +49,7 @@ char* base64_encode(char* input) {
   }
   printf("\n");
 
-  uint8_t subbits[6] = {0};
+  unsigned char subbits[6] = {0};
   int bits_len = strlen(input) * 8;
   k = 0;
   for (int start = 0; start < bits_len; start += 6) {
