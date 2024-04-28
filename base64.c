@@ -82,15 +82,37 @@ char* base64_decode(char* input) {
 
   int input_len = strlen(input);
   unsigned char bits[input_len * 6];
+  int bits_len = strlen(input) * 6;
 
   // convert input to bits
   int k = 0;
   for (int i = 0; i < input_len; i++) {
-    for (int j = 7; j >= 0; j--) {
-      printf("%d", (((unsigned char)input[i] >> j) & 1));  // print each bit
-      bits[k++] = (((unsigned char)input[i] >> j) & 1);
+    int decimal = decoding_table[input[i]];
+    while (decimal > 0) {
+      // bits[k] = decimal % 2;
+      printf("%d", decimal % 2);
+      decimal = decimal / 2;
+      k++;
     }
+    printf("\n");
   }
+  printf("\n");
+
+  // printf("\n\nconverted bits:\n");
+
+  // for (int k = 0; k < bits_len; k++) {
+  //   printf("%d\n", bits[k]);
+  // }
+  // printf("\n");
+  
+
+  // int k = 0;
+  // for (int i = 0; i < input_len; i++) {
+  //   for (int j = 7; j >= 0; j--) {
+  //     printf("%d", (((unsigned char)input[i] >> j) & 1));  // print each bit
+  //     bits[k++] = (((unsigned char)input[i] >> j) & 1);
+  //   }
+  // }
 
   // int bits_len = size *8;
   // unsigned char subbits[8] = {0};
