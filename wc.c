@@ -14,7 +14,7 @@
 #define ANSI_COLOR_CYAN "\x1b[36m"
 #define ANSI_COLOR_RESET "\x1b[0m"
 
-char hbuf[10000];
+char hbuf[10000] = {0};
 
 struct body {
   int chunk_size;
@@ -29,7 +29,6 @@ struct header {
 int main() {
   int t, i, j;
   FILE *f;
-  char response[2000000];
   struct sockaddr_in server;
   unsigned char *p;
 
@@ -96,8 +95,7 @@ int main() {
     }
   }
 
-  char bbuf[2000000];
-  char *chunks[10];
+  char bbuf[2000000] = {0};
   // if Content-Length is not there i have a chunk to read
   if (len == 0) {
     int i = 0;
