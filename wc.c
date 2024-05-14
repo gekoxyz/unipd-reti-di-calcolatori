@@ -110,24 +110,19 @@ int main() {
         bbuf[i - 1] = 0;
         // move from \n to the next position in the buffer (which is free)
         i++;
-
-        // printf("BUFFER\n");
-        // for (int b = (i-5); b < (i+5); b++)
-        // {
-        //   printf("%c", bbuf[b]);
-        // }
-        // printf("\n");
-        
         // convert from pointer of chunk_start to the next char which
         // is not hexadecimal (this means the \r) the number and get the
         // chunk length
         long size = strtol(chunk_start, NULL, 16);
         printf("conversion: bbuf[%d] -> %ld\n", i, size);
+        if (size == 0) break;
         // add 2 which is the \r\n so i will end up exactly at the start of the next chunk-length
         size += 2;
         // read all the body from the buffer
-        // TODO: FRAGMENT IN SMALLER PIECES
-        read(my_socket, &bbuf[i], size);
+
+        for (long k = 0; k < size; k++) {
+          read(my_socket, &bbuf[i + k], 1);
+        }
         // increment the counter of i since i read all this characters
         i += size;
         // if i am after \r\n but not in a chunk length this mean
@@ -139,7 +134,7 @@ int main() {
     }
   }
 
-  printf("\n\n\n");
+  printf("\nPrinting the parsed data\n\n");
   for (int i = 0; i < 1999999; i++)
   {
     printf("%c", bbuf[i]);
