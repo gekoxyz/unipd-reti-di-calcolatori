@@ -117,7 +117,7 @@ int main() {
       fin = fopen(filename + 1, "r");
       // if i don't find the file i return 404 file not found
       if (fin == NULL) {
-        sprintf(response, "HTTP/1.1 404 NOT FOUND\r\nConnection:close\r\n\r\n");  // TODO: ADD 404.html
+        sprintf(response, "HTTP/1.1 404 NOT FOUND\r\nConnection:close\r\n\r\n");
         // writing the header
         write(clientfd, response, strlen(response));
         fin = fopen("404.html", "r");
