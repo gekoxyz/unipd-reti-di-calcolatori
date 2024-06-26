@@ -8,7 +8,7 @@
 #include <string.h>
 #include <unistd.h>
 
-
+char command[1000];
 char hbuf[10000];
 char entity[1000];
 struct headers{
@@ -41,7 +41,7 @@ if ( s == -1) {
 	}
 
 srvaddr.sin_family=AF_INET;
-srvaddr.sin_port=htons(1337);
+srvaddr.sin_port=htons(8077);
 srvaddr.sin_addr.s_addr=0;
 
 t = bind(s,(struct sockaddr *)&srvaddr,sizeof(struct sockaddr_in));
@@ -57,7 +57,7 @@ if ( t == -1) {
 	}
 len=sizeof(struct sockaddr);
 while( 1 ){
-// 	close(s2);
+	close(s2);
 	s2 = accept(s,(struct sockaddr *) &remote, &len); 
 	if ( fork() ) continue;
 	if (s2 == -1){ 
@@ -87,7 +87,12 @@ while( 1 ){
 	ver = commandline +i;
 	for(;commandline[i]!=0;i++) {} commandline[i]=0; i=i+1;
 	printf("Method = %s, URI = %s, VER = %s \n", method, filename,ver);
-
+	if(!strncmp("/exec/",filename,6)){
+		sprintf(command,"%s > /home/utente/output",filename+6);
+		printf("eseguo comando %s\n",command);
+		system(command);
+		strcpy(filename,"/output");	
+	}
 	fin = fopen(filename+1,"rt");
 	if (fin == NULL){
 		sprintf(response,"HTTP/1.1 404 NOT FOUND\r\nConnection:close\r\n\r\n<html><h1>File %s non trovato</h1>i</html>",filename);
@@ -95,7 +100,7 @@ while( 1 ){
 		close(s2);
 	 	exit(1);
 	}
-	sprintf(response,"HTTP/1.1 200 OK\r\nConnection:close\r\n\r\n");
+	sprintf(response,"HTTP/1.1 200 OK\r\nConnection:close\r\n\r\n<html>");
 	write(s2,response,strlen(response));
 	while (!feof(fin)){
 		fread(entity,1,1000,fin);
@@ -106,5 +111,4 @@ while( 1 ){
 	exit(-1);
 	}
 }
-
 

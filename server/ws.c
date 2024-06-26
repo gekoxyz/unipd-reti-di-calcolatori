@@ -121,20 +121,15 @@ int main() {
         // writing the header
         write(clientfd, response, strlen(response));
         fin = fopen("404.html", "r");
-        // writing the body
-        while (!feof(fin)) {
-          fread(entity, 1, 1000, fin);
-          write(clientfd, entity, 1000);
-        }
       } else {
         sprintf(response, "HTTP/1.1 200 OK\r\nConnection:close\r\n\r\n");
         // writing the header
         write(clientfd, response, strlen(response));
-        // writing the body
-        while (!feof(fin)) {
-          fread(entity, 1, 1000, fin);
-          write(clientfd, entity, 1000);
-        }
+      }
+      // writing the body
+      while (!feof(fin)) {
+        fread(entity, 1, 1000, fin);
+        write(clientfd, entity, 1000);
       }
       fclose(fin);
       close(clientfd);
