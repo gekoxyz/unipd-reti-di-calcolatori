@@ -61,21 +61,21 @@ int main() {
       perror("Accept fallita");
       return 1;
     }
-    commandline = h[0].n = hbuf;
+    commandline = headers[0].n = hbuf;
     for (j = 0, i = 0; read(s2, hbuf + i, 1); i++) {
-      if ((hbuf[i] == ':') && (h[j].v == NULL)) {
-        h[j].v = &hbuf[i + 1];
+      if ((hbuf[i] == ':') && (headers[j].v == NULL)) {
+        headers[j].v = &hbuf[i + 1];
         hbuf[i] = 0;
       }
       if (hbuf[i] == '\n' && hbuf[i - 1] == '\r') {
         hbuf[i - 1] = 0;
-        if (h[j].n[0] == 0) break;
-        h[++j].n = &hbuf[i + 1];
+        if (headers[j].n[0] == 0) break;
+        headers[++j].n = &hbuf[i + 1];
       }
     }
 
     for (i = 0; i < j; i++) {
-      printf("%s ----> %s\n", h[i].n, h[i].v);
+      printf("%s ----> %s\n", headers[i].n, headers[i].v);
     }
     method = commandline;
     for (i = 0; commandline[i] != ' '; i++) {

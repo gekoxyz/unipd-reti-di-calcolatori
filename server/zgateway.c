@@ -15,15 +15,14 @@ char command[1000];
 char hbuf[10000];
 char entity[1000];
 struct headers {
-  char *n;
-  char *v;
-} h[100];
+  char *name;
+  char *value;
+} headers[100];
 
 struct sockaddr_in remote;
 
 int main() {
   FILE *fin;
-  char *method, *filename, *ver;
   char request[3001];
   char response[3001];
   int t, len;
@@ -49,10 +48,10 @@ int main() {
   }
 
   struct sockaddr_in server_addr = {
-    // IPv4 address
-    .sin_family = AF_INET,
-    // set port by using htons to convert from host byte order to network byte order
-    .sin_port = htons(SERVER_PORT)};
+      // IPv4 address
+      .sin_family = AF_INET,
+      // set port by using htons to convert from host byte order to network byte order
+      .sin_port = htons(SERVER_PORT)};
 
   // bind is used to associate a socket with a specific address and port
   if (bind(sockfd, (struct sockaddr *)&server_addr, sizeof(struct sockaddr_in)) == SOCKET_ERROR) {
@@ -68,71 +67,90 @@ int main() {
   }
 
   printf("Server running on port %d\n", SERVER_PORT);
-  int clientfd;
+
   while (1) {
-    close(clientfd);
     struct sockaddr_in client_addr;
     socklen_t client_addr_size = sizeof(client_addr);
-    clientfd = accept(sockfd, (struct sockaddr *)&remote, &client_addr_size);
-
-    if (fork()) continue;
+    int clientfd = accept(sockfd, (struct sockaddr *)&remote, &client_addr_size);
     if (clientfd == SOCKET_ERROR) {
       perror("Accept fallita");
       return 1;
     }
-    commandline = h[0].n = hbuf;
-    for (j = 0, i = 0; read(clientfd, hbuf + i, 1); i++) {
-      if ((hbuf[i] == ':') && (h[j].v == NULL)) {
-        h[j].v = &hbuf[i + 1];
-        hbuf[i] = 0;
-      }
-      if (hbuf[i] == '\n' && hbuf[i - 1] == '\r') {
-        hbuf[i - 1] = 0;
-        if (h[j].n[0] == 0) break;
-        h[++j].n = &hbuf[i + 1];
-      }
-    }
 
-    for (i = 0; i < j; i++) {
-      printf("%s ----> %s\n", h[i].n, h[i].v);
-    }
-    method = commandline;
-    for (i = 0; commandline[i] != ' '; i++) {
-    }
-    commandline[i] = 0;
-    i = i + 1;
-    filename = commandline + i;
-    for (; commandline[i] != ' '; i++) {
-    }
-    commandline[i] = 0;
-    i = i + 1;
-    ver = commandline + i;
-    for (; commandline[i] != 0; i++) {
-    }
-    commandline[i] = 0;
-    i = i + 1;
-    printf("Method = %s, URI = %s, VER = %s \n", method, filename, ver);
-    if (!strncmp("/exec/", filename, 6)) {
-      sprintf(command, "%s > ./exeout.txt", filename + 6);
-      printf("eseguo comando %s\n", command);
-      system(command);
-      strcpy(filename, "/exeout.txt");
-    }
-    fin = fopen(filename + 1, "rt");
-    if (fin == NULL) {
-      sprintf(response, "HTTP/1.1 404 NOT FOUND\r\nConnection:close\r\n\r\n<html><h1>File %s non trovato</h1>i</html>", filename);
-      write(clientfd, response, strlen(response));
+    if (fork() == 0) {
+      commandline = headers[0].name = hbuf;
+      // parsing the HTTP request to read all the headers and remove CRLFs
+      for (j = 0, i = 0; read(clientfd, hbuf + i, 1); i++) {
+        if ((hbuf[i] == ':') && (headers[j].value == NULL)) {
+          headers[j].value = &hbuf[i + 1];
+          hbuf[i] = 0;
+        }
+        if (hbuf[i] == '\n' && hbuf[i - 1] == '\r') {
+          hbuf[i - 1] = 0;
+          if (headers[j].name[0] == 0) break;
+          headers[++j].name = &hbuf[i + 1];
+        }
+      }
+
+      // printing the headers i just parsed
+      for (i = 0; i < j; i++) {
+        printf("%s --> %s\n", headers[i].name, headers[i].value);
+      }
+
+      char *method = commandline;
+      for (i = 0; commandline[i] != ' '; i++) {
+      }
+      commandline[i] = 0;
+      i++;
+
+      // parsing the filename
+      char *filename = commandline + i;
+      for (; commandline[i] != ' '; i++) {
+      }
+      commandline[i] = 0;
+      i++;
+      // parsing the HTTP version (HTTP/1.1)
+      char *ver = commandline + i;
+      for (; commandline[i] != 0; i++) {
+      }
+      commandline[i] = 0;
+      i++;
+      printf("Method = %s, URI = %s, VER = %s \n", method, filename, ver);
+
+      // check if filename starts with /exec/
+      // if this is true save the output of the command to the exeout.txt file
+      // and copy it to the string filename
+      if (!strncmp("/exec/", filename, 6)) {
+        sprintf(command, "%s > ./exeout.txt", filename + 6);
+        printf("eseguo comando %s\n", command);
+        system(command);
+        strcpy(filename, "/exeout.txt");
+      }
+
+      // +1 is to remove the / at the beginning of /filename.html
+      fin = fopen(filename + 1, "rt");
+      // if i don't find the file i return 404 file not found
+      if (fin == NULL) {
+        sprintf(response, "HTTP/1.1 404 NOT FOUND\r\nConnection:close\r\n\r\n");
+        // writing the header
+        write(clientfd, response, strlen(response));
+        fin = fopen("404.html", "r");
+      } else {
+        sprintf(response, "HTTP/1.1 200 OK\r\nConnection:close\r\n\r\n<html>");
+        // writing the header
+        write(clientfd, response, strlen(response));
+      }
+      // writing the body
+      while (!feof(fin)) {
+        fread(entity, 1, 1000, fin);
+        write(clientfd, entity, 1000);
+      }
+      fclose(fin);
       close(clientfd);
-      exit(1);
+      exit(-1);
+    } else {
+      close(clientfd);
+      continue;
     }
-    sprintf(response, "HTTP/1.1 200 OK\r\nConnection:close\r\n\r\n<html>");
-    write(clientfd, response, strlen(response));
-    while (!feof(fin)) {
-      fread(entity, 1, 1000, fin);
-      write(clientfd, entity, 1000);
-    }
-    fclose(fin);
-    close(clientfd);
-    exit(-1);
   }
 }
