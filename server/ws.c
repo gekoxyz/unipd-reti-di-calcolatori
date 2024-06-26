@@ -37,10 +37,10 @@ int main() {
   }
 
   struct sockaddr_in server_addr = {
-      // the address is an IPv4 address
-      .sin_family = AF_INET,
-      // sets the port of the structure by using htons to converto from host byte order to network byte order
-      .sin_port = htons(SERVER_PORT)};
+    // the address is an IPv4 address
+    .sin_family = AF_INET,
+    // sets the port of the structure by using htons to converto from host byte order to network byte order
+    .sin_port = htons(SERVER_PORT)};
 
   // SOL_SOCKET is the socket layer itself. It is used for options that are protocol independent
   // SO_REUSEADDR controls if bind should permit reuse of local addresses for this socket
