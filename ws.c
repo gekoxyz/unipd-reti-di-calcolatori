@@ -7,7 +7,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#define SERVER_PORT 1337
+#define SERVER_PORT 8080
 #define SOCKET_ERROR -1
 
 char hbuf[10000];
