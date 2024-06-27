@@ -10,14 +10,17 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#define SERVER_PORT 8080
+#define SOCKET_ERROR -1
+
 struct sockaddr_in local, remote;
 char request[100000];
 char response[1000];
 
 struct header {
-  char *n;
-  char *v;
-} h[100];
+  char *name;
+  char *value;
+} headers[100];
 
 unsigned char envbuf[1000];
 int pid;
@@ -36,88 +39,95 @@ void add_env(char *env_key, char *env_value) {
 int main() {
   char hbuffer[10000];
   char *reqline;
-  char *method, *url, *ver;
   char *filename, *content_type;
   char fullname[200];
   FILE *fin;
   int c;
   int n;
-  int i, j, t, s, s2;
+  int i, j, t, sockfd, s2;
   int yes = 1;
-  int len;
   int length;
-  if ((s = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+
+  if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == SOCKET_ERROR) {
     printf("errno = %d\n", errno);
     perror("Socket Fallita");
     return -1;
   }
   local.sin_family = AF_INET;
-  local.sin_port = htons(8080);
+  local.sin_port = htons(SERVER_PORT);
   local.sin_addr.s_addr = 0;
 
-  t = setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
-  if (t == -1) {
+  if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == SOCKET_ERROR) {
     perror("setsockopt fallita");
     return 1;
   }
 
-  if (-1 == bind(s, (struct sockaddr *)&local, sizeof(struct sockaddr_in))) {
+  if (bind(sockfd, (struct sockaddr *)&local, sizeof(struct sockaddr_in)) == SOCKET_ERROR) {
     perror("Bind Fallita");
     return -1;
   }
 
-  if (-1 == listen(s, 10)) {
+  if (listen(sockfd, 10) == SOCKET_ERROR) {
     perror("Listen Fallita");
     return -1;
   }
+
   remote.sin_family = AF_INET;
   remote.sin_port = htons(0);
   remote.sin_addr.s_addr = 0;
-  len = sizeof(struct sockaddr_in);
+
   while (1) {
-    s2 = accept(s, (struct sockaddr *)&remote, &len);
+    int sock_size = sizeof(struct sockaddr_in);
+    s2 = accept(sockfd, (struct sockaddr *)&remote, &sock_size);
+
+    // write 0 on the buffers
     bzero(hbuffer, 10000);
-    bzero(h, sizeof(struct header) * 100);
-    reqline = h[0].n = hbuffer;
+    bzero(headers, sizeof(struct header) * 100);
+
+    // parse HTTP request to read all the headers and remove CRLFs
+    reqline = headers[0].name = hbuffer;
     for (i = 0, j = 0; read(s2, hbuffer + i, 1); i++) {
       if (hbuffer[i] == '\n' && hbuffer[i - 1] == '\r') {
-        hbuffer[i - 1] = 0;  // Termino il token attuale
-        if (!h[j].n[0]) break;
-        h[++j].n = hbuffer + i + 1;
+        hbuffer[i - 1] = 0;  // terminate the token
+        if (!headers[j].name[0]) break;
+        headers[++j].name = hbuffer + i + 1;
       }
-      if (hbuffer[i] == ':' && !h[j].v) {
+      if (hbuffer[i] == ':' && !headers[j].value) {
         hbuffer[i] = 0;
-        h[j].v = hbuffer + i + 1;
+        headers[j].value = hbuffer + i + 1;
       }
     }
+
+    // print the headers
     length = 0;
     for (i = 0; i < j; i++) {
-      printf("%s ---> %s\n", h[i].n, h[i].v);
-      if (!strcmp(h[i].n, "Content-Length")) {
-        length = atoi(h[i].v);
+      printf("%s --> %s\n", headers[i].name, headers[i].value);
+      if (!strcmp(headers[i].name, "Content-Length")) {
+        length = atoi(headers[i].value);
       }
-
-      if (!strcmp(h[i].n, "Content-Type")) {
-        add_env("CONTENT_TYPE", h[i].v + 1);
+      if (!strcmp(headers[i].name, "Content-Type")) {
+        add_env("CONTENT_TYPE", headers[i].value + 1);
       }
     }
-    len = 1000;
+    
+    int len = 1000;
     printf("%s\n", reqline);
     if (len == -1) {
       perror("Read Fallita");
       return -1;
     }
-    method = reqline;
+    char *method = reqline;
     len = 1000;
     for (i = 0; i < len && reqline[i] != ' '; i++);
     reqline[i++] = 0;
-    url = reqline + i;
+    char *url = reqline + i;
     for (; i < len && reqline[i] != ' '; i++);
     reqline[i++] = 0;
-    ver = reqline + i;
+    char *ver = reqline + i;
     for (; i < len && reqline[i] != '\r'; i++);
     reqline[i++] = 0;
     add_env("METHOD", method);
+
     filename = url + 1;
     if (!strncmp(url, "/cgi/", 5)) {  // CGI
       filename = url + 5;
@@ -138,6 +148,7 @@ int main() {
         close(s2);
         continue;
       }
+
       fin = fopen(filename, "rt");
       if (fin == NULL) {
         sprintf(response, "HTTP/1.1 404 Not Found\r\n\r\n");
@@ -148,14 +159,14 @@ int main() {
         fclose(fin);
         for (i = 0; env[i]; i++)
           printf("environment: %s\n", env[i]);
-        sprintf(fullname, "/home/2044941/%s", filename);
+        sprintf(fullname, "%s", filename);
         myargv[0] = fullname;
         myargv[1] = NULL;
         printf("Executing %s\n", fullname);
         if (!(pid = fork())) {
           dup2(s2, 1);
           dup2(s2, 0);
-          if (-1 == execve(fullname, myargv, env)) {
+          if (execve(fullname, myargv, env) == SOCKET_ERROR) {
             perror("execve");
             exit(1);
           }
@@ -184,5 +195,5 @@ int main() {
     close(s2);
     env_c = env_i = 0;
   }
-  close(s);
+  close(sockfd);
 }
