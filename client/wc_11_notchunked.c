@@ -14,6 +14,9 @@
 #define ANSI_COLOR_CYAN    "\x1b[36m"
 #define ANSI_COLOR_RESET   "\x1b[0m"
 
+#define SOCKET_ERROR -1
+#define SERVER_PORT 80
+
 char hbuf[10000];
 
 struct header {
@@ -33,26 +36,23 @@ int main() {
   // socket type SOCK_STREAM connection oriented sockets
   // 0 is the default protocol for AF_INET and SOCK_STREAM (TCP)
   int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  if (sockfd == -1) {
+  if (sockfd == SOCKET_ERROR) {
     printf("Errno = %d (%d)\n", errno, EAFNOSUPPORT);
     perror("Socket fallita:");
     return 1;
   }
   server.sin_family = AF_INET;
-  server.sin_port = htons(80);
-  p = (unsigned char *)&server.sin_addr.s_addr;
-  p[0] = 142;
-  p[1] = 250;
-  p[2] = 187;
-  p[3] = 196;  // 142.250.187.196
-  t = connect(sockfd, (struct sockaddr *)&server, sizeof(struct sockaddr_in));
-  if (t == -1) {
+  server.sin_port = htons(SERVER_PORT);
+  struct hostent *he = gethostbyname("gekohomelab.ddns.net");
+  server.sin_addr.s_addr = *(unsigned int *)(he->h_addr);
+
+  if (connect(sockfd, (struct sockaddr *)&server, sizeof(struct sockaddr_in)) == SOCKET_ERROR) {
     perror("Connect fallita");
     return 1;
   }
 
   // writing the HTTP request
-  char *request = "GET / HTTP/1.1\r\n\r\n";
+  char *request = "GET /index.html HTTP/1.1\r\n\r\n";
   // writing the request to the socket
   write(sockfd, request, strlen(request));
   

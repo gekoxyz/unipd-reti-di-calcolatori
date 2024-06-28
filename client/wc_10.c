@@ -3,6 +3,10 @@
 #include <stdio.h>
 #include <sys/socket.h>
 #include <unistd.h>
+
+#define SOCKET_ERROR -1
+#define SERVER_PORT 80
+
 int main() {
   int try, i;
   char response[2000000];
@@ -13,13 +17,13 @@ int main() {
   // socket type SOCK_STREAM connection oriented sockets
   // 0 is the default protocol for AF_INET and SOCK_STREAM (TCP)
   int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  if (sockfd == -1) {
+  if (sockfd == SOCKET_ERROR) {
     printf("Errno = %d (%d)\n", errno, EAFNOSUPPORT);
     perror("Socket fallita:");
     return 1;
   }
   server.sin_family = AF_INET;
-  server.sin_port = htons(80);
+  server.sin_port = htons(SERVER_PORT);
   // setting the ip to 142.250.187.196
   unsigned char *ip = (unsigned char *)&server.sin_addr.s_addr;
   ip[0] = 142;
@@ -28,7 +32,7 @@ int main() {
   ip[3] = 196;
   // try to connect to the socket
   try = connect(sockfd, (struct sockaddr *)&server, sizeof(struct sockaddr_in));
-  if (try == -1) {
+  if (try == SOCKET_ERROR) {
     perror("Connect fallita");
     return 1;
   }
