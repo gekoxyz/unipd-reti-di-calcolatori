@@ -5,6 +5,8 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <netdb.h>
+#include <netdb.h>
 
 #define ANSI_COLOR_RED "\x1b[31m"
 #define ANSI_COLOR_GREEN "\x1b[32m"
@@ -47,7 +49,7 @@ int main() {
   }
   server.sin_family = AF_INET;
   server.sin_port = htons(SERVER_PORT);
-  struct hostent *he = gethostbyname("gekohomelab.ddns.net");
+  struct hostent *he; he = gethostbyname("gekohomelab.ddns.net");
   server.sin_addr.s_addr = *(unsigned int *)(he->h_addr);
 
   if (connect(my_socket, (struct sockaddr *)&server, sizeof(struct sockaddr_in)) == SOCKET_ERROR) {
