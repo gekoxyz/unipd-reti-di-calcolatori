@@ -97,7 +97,7 @@ int main() {
       for (j = 0, i = 0; read(clientfd, hbuf + i, 1); i++) {
         if ((hbuf[i] == ':') && (headers[j].value == NULL)) {
           hbuf[i] = 0;
-          headers[j].value = &hbuf[i + 1];
+          headers[j].value = &hbuf[i + 2];
         }
         if (hbuf[i] == '\n' && hbuf[i - 1] == '\r') {
           hbuf[i - 1] = 0;
@@ -106,9 +106,15 @@ int main() {
         }
       }
 
-      // printing the headers i just parsed
+      int if_none_match_header_index = -1;
+      // printing the headers i just parsed and searching for the If-None-Match
       for (i = 0; i < j; i++) {
-        printf("%s --> %s\n", headers[i].name, headers[i].value);
+        if (strcmp(headers[i].name, "If-None-Match") == 0) {
+          printf(ANSI_COLOR_GREEN "Found If-None-Match\n" ANSI_COLOR_RESET);
+          if_none_match_header_index = i;
+        }
+        // printf("%s-->%s\n", headers[i].name, headers[i].value);
+        printf("%s,%s\n", headers[i].name, headers[i].value);
       }
 
       char *method = commandline;
@@ -125,7 +131,18 @@ int main() {
       for (; commandline[i] != 0; i++);
       commandline[i] = 0;
       i++;
-      printf("Method = %s, URI = %s, VER = %s \n", method, filename, ver);
+      printf(ANSI_COLOR_YELLOW "Method = %s, URI = %s, VER = %s \n" ANSI_COLOR_RESET, method, filename, ver);
+
+      /*
+      The server should support conditional requests from clients using the If-None-Match header,
+      which contains the client's cached ETag value. If the server's current ETag matches the client's,
+      it can respond with a 304 Not Modified status, allowing the client to use its cached copy.
+
+      If the ETag does not match, the server should return the updated resource with the new ETag in the response.
+      */
+
+      // // check for the If-None-Match
+      //   // the page has changed
 
       // +1 is to remove the / at the beginning of /filename.html
       fin = fopen(filename + 1, "r");
@@ -136,22 +153,31 @@ int main() {
         write(clientfd, response, strlen(response));
         fin = fopen("404.html", "r");
       } else {
-        char command[100] = {0};
-        sprintf(command, "md5sum index.html > ./md5out.txt");
-        printf("eseguo comando %s\n", command);
-        system(command);
+        // generating the etag
+        system("md5sum index.html > ./md5out.txt");
 
-        /*
-        TODO: now i send:
-        ETag -->aeb8eb305d13642ef576fc962cc196f6  index.html
-        i have to remove the index.html after etag
-        proposed solution (to implement): write a parser which stops at first space and puts string terminator
-        */
         FILE *md5out = fopen("md5out.txt", "rt");
-        // if i don't find the file i return 404 file not found
-        char etag[64] = {0};
-        sprintf(response, "HTTP/1.1 200 OK\r\nETag:%s\r\nConnection:close\r\n\r\n", etag);
+        char etag[33] = {0};  // 33 because the md5 hash is long 32 chars
+        fgets(etag, sizeof(etag), md5out);
 
+        if ((if_none_match_header_index != -1)){
+          printf("CONTROLLO IL VALUE DELL'ETAG\n");
+          printf("%s\n", headers[if_none_match_header_index].value);
+          printf("%s\n", etag);
+          printf("%d\n", strcmp(headers[if_none_match_header_index].value, etag));
+          if ((strcmp(headers[if_none_match_header_index].value, etag) == 0)) {
+            printf("#### SENDING HTTP 304 ####\n");
+
+            sprintf(response, "HTTP/1.1 304 Not Modified");
+            // writing the header
+            write(clientfd, response, strlen(response));
+
+            fclose(fin);
+            close(clientfd);
+            exit(-1);
+          }
+        }
+        sprintf(response, "HTTP/1.1 200 OK\r\nETag:%s\r\nConnection:close\r\n\r\n", etag);
         // writing the header
         write(clientfd, response, strlen(response));
       }
@@ -160,6 +186,7 @@ int main() {
         fread(entity, 1, 1000, fin);
         write(clientfd, entity, 1000);
       }
+
       fclose(fin);
       close(clientfd);
       exit(-1);

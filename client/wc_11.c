@@ -86,7 +86,7 @@ int main() {
 
   int len = 0;
   for (i = 0; i < j; i++) {
-    printf(ANSI_COLOR_CYAN "%s" ANSI_COLOR_RESET " -->" ANSI_COLOR_YELLOW "%s" ANSI_COLOR_RESET "\n", headers[i].name, headers[i].value);
+    printf(ANSI_COLOR_CYAN "%s" ANSI_COLOR_RESET " --> " ANSI_COLOR_YELLOW "%s" ANSI_COLOR_RESET "\n", headers[i].name, headers[i].value);
     if (!strcmp(headers[i].name, "Content-Length")) {
       // atoi converts a string of characters into an integer value
       len = atoi(headers[i].value);
