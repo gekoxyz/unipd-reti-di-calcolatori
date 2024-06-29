@@ -113,8 +113,7 @@ int main() {
           printf(ANSI_COLOR_GREEN "Found If-None-Match\n" ANSI_COLOR_RESET);
           if_none_match_header_index = i;
         }
-        // printf("%s-->%s\n", headers[i].name, headers[i].value);
-        printf("%s,%s\n", headers[i].name, headers[i].value);
+        printf("%s --> %s\n", headers[i].name, headers[i].value);
       }
 
       char *method = commandline;
@@ -141,9 +140,6 @@ int main() {
       If the ETag does not match, the server should return the updated resource with the new ETag in the response.
       */
 
-      // // check for the If-None-Match
-      //   // the page has changed
-
       // +1 is to remove the / at the beginning of /filename.html
       fin = fopen(filename + 1, "r");
       // if i don't find the file i return 404 file not found
@@ -160,23 +156,15 @@ int main() {
         char etag[33] = {0};  // 33 because the md5 hash is long 32 chars
         fgets(etag, sizeof(etag), md5out);
 
-        if ((if_none_match_header_index != -1)){
-          printf("CONTROLLO IL VALUE DELL'ETAG\n");
-          printf("%s\n", headers[if_none_match_header_index].value);
-          printf("%s\n", etag);
-          printf("%d\n", strcmp(headers[if_none_match_header_index].value, etag));
-          if ((strcmp(headers[if_none_match_header_index].value, etag) == 0)) {
-            printf("#### SENDING HTTP 304 ####\n");
-
-            sprintf(response, "HTTP/1.1 304 Not Modified");
-            // writing the header
-            write(clientfd, response, strlen(response));
-
-            fclose(fin);
-            close(clientfd);
-            exit(-1);
-          }
+        if ((if_none_match_header_index != -1) && (strcmp(headers[if_none_match_header_index].value, etag) == 0)) {
+          sprintf(response, "HTTP/1.1 304 Not Modified");
+          // writing the header
+          write(clientfd, response, strlen(response));
+          fclose(fin);
+          close(clientfd);
+          exit(-1);
         }
+        
         sprintf(response, "HTTP/1.1 200 OK\r\nETag:%s\r\nConnection:close\r\n\r\n", etag);
         // writing the header
         write(clientfd, response, strlen(response));
