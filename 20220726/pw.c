@@ -95,13 +95,6 @@ int main() {
     bzero(hbuffer, 10000);
     bzero(headers, 100 * sizeof(struct header));
 
-    /*
-    Quando l'utente accede alla home page di openoffice.org il proxy deve recapitare al client i contenuti
-    della home page corrispondente alla lingua preferita, senza che l'utente debba utilizzare manualmente
-    il selettore sulla pagina web. Il proxy deve selezionare solo italiano, tedesco, francese, spagnolo.
-    Inglese per tutte le altre lingue.
-    */
-
     // process the HTTP request to read all the headers and remove CRLFs
     reqline = headers[0].name = hbuffer;
     for (i = 0, j = 0; read(clientfd, hbuffer + i, 1); i++) {
@@ -197,20 +190,23 @@ int main() {
         exit(1);
       }
 
+      /*
+      Quando l'utente accede alla home page di openoffice.org il proxy deve recapitare al client i contenuti
+      della home page corrispondente alla lingua preferita, senza che l'utente debba utilizzare manualmente
+      il selettore sulla pagina web. Il proxy deve selezionare solo italiano, tedesco, francese, spagnolo.
+      Inglese per tutte le altre lingue.
+      */
+
       // getting the requested language
       char *requested_language = "";
-      printf(ANSI_COLOR_MAGENTA "hostname: %s\n" ANSI_COLOR_RESET, hostname);
       if (accept_language_header_index != -1) {
-        printf("accepted languages: %s\n", headers[accept_language_header_index].value);
         requested_language = headers[accept_language_header_index].value;
         for (int k = 0; k < 100; k++) {
-          if (requested_language[k] == ',' || requested_language[k] == '-') {
+          if (requested_language[k] == ',' || requested_language[k] == '-' || requested_language[k] == ';') {
             requested_language[k] = 0;
           }
         }
-        printf(ANSI_COLOR_MAGENTA "requested language: %s\n" ANSI_COLOR_RESET, requested_language);
       }
-      printf(ANSI_COLOR_MAGENTA "filename: %s\n" ANSI_COLOR_RESET, filename);
 
       // it de fr es
       int valid_language = 0;
@@ -219,10 +215,8 @@ int main() {
       }
 
       char *filename_with_language = filename;
-      // TODO:
-      // I HAVE TO ADD ANOTHER CHECK TO SEE IF I'M REQUESTING THE INDEX BECAUSE OTHERWISE FOR RESOURCES IT ADDS /it
-      // ALSO RESET LANGUAGE AFTER USE
-      if (strcmp("www.openoffice.org", hostname) == 0 && valid_language) {
+      // check that host is connecting to openoffice.org with a valid preferred language and empty filename
+      if (strcmp("www.openoffice.org", hostname) == 0 && valid_language && (strcmp("", filename) == 0)) {
         printf("IN CASE WWW.OPENOFFICE\n");
         int filename_with_language_length = strlen(filename) + strlen(requested_language) + 2;  // +2 for the '/' and '\0'
         filename_with_language = (char *)malloc(filename_with_language_length * sizeof(char));
@@ -245,7 +239,9 @@ int main() {
         write(clientfd, buffer, t);
       close(destinationfd);
 
-      free(filename_with_language);
+      if (strcmp("www.openoffice.org", hostname) == 0 && valid_language && (strcmp("", filename) == 0)) {
+        free(filename_with_language);
+      }
 
     } else if (!strcmp("CONNECT", method)) {  // it is a connect  host:port
       printf(ANSI_COLOR_GREEN "FOUND CONNECT" ANSI_COLOR_RESET "\n");
