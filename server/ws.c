@@ -139,4 +139,5 @@ int main() {
       continue;
     }
   }
+  close(sockfd);
 }
