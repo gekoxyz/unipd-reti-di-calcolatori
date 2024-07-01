@@ -218,14 +218,18 @@ int main() {
           char *location = response_headers[location_header_index].value;
           char *new_filename = filename;
           char *new_hostname = hostname;
-          // check that Location doesn't contain http:// (it's not a new url)
-          //  && strncmp(location, "https://", 8) != 0
-          if (strncmp(location, "http://", 7) != 0) {
-            // the string doesn't start with http:// so the file is on the same server
-            new_filename = response_headers[location_header_index].value;
-          } else {
-            // the string starts with http:// so i have to divide and do lots of things
-            for (int k = 7;; k++) {
+
+          // check that Location doesn't contain http:// or https:// (it's not a new url)
+          if (strncmp(location, "http://", 7) == 0) {
+            for (int k = 7; k < 100; k++) {
+              if (location[k] == '/') {
+                location[k] = 0;
+                new_hostname = location;
+                new_filename = &location[k + 1];
+              }
+            }
+          } else if (strncmp(location, "https://", 8) == 0) {
+            for (int k = 8; k < 100; k++) {
               if (location[k] == '/') {
                 location[k] = 0;
                 new_hostname = location;
@@ -255,8 +259,9 @@ int main() {
 
           sprintf(request, "GET /%s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n", new_filename, new_hostname);
           write(destinationfd, request, strlen(request));
-
+          printf("*******************\n");
           printf(ANSI_COLOR_MAGENTA "%s\n" ANSI_COLOR_RESET, request);
+          printf("*******************\n");
 
           char body_buffer[2000] = {0};
           // write the response to the client
