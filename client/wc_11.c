@@ -49,7 +49,8 @@ int main() {
   }
   server.sin_family = AF_INET;
   server.sin_port = htons(SERVER_PORT);
-  struct hostent *he; he = gethostbyname("gekohomelab.ddns.net");
+  // struct hostent *he; he = gethostbyname("gekohomelab.ddns.net");
+  struct hostent *he; he = gethostbyname("example.org");
   server.sin_addr.s_addr = *(unsigned int *)(he->h_addr);
 
   if (connect(my_socket, (struct sockaddr *)&server, sizeof(struct sockaddr_in)) == SOCKET_ERROR) {
@@ -58,7 +59,7 @@ int main() {
   }
 
   // writing the HTTP request
-  char *request = "GET /index.html HTTP/1.1\r\n\r\n";
+  char *request = "GET /index.html HTTP/1.1\r\nHost: example.org\r\nConnection: close\r\n\r\n";
   // writing the request to the socket
   write(my_socket, request, strlen(request));
 
@@ -84,6 +85,7 @@ int main() {
     }
   }
 
+  char bbuf[2000000] = {0};
   int len = 0;
   for (i = 0; i < j; i++) {
     printf(ANSI_COLOR_CYAN "%s" ANSI_COLOR_RESET " --> " ANSI_COLOR_YELLOW "%s" ANSI_COLOR_RESET "\n", headers[i].name, headers[i].value);
@@ -91,10 +93,12 @@ int main() {
       // atoi converts a string of characters into an integer value
       len = atoi(headers[i].value);
       printf("len = %d\n", len);
+      body_elements[0].chunk_size = len;
+      body_elements[0].content = &bbuf[0];
+      read(my_socket, bbuf, len);
     }
   }
 
-  char bbuf[2000000] = {0};
   // if Content-Length is not there i have a chunk to read
   if (len == 0) {
     int i = 0;
@@ -131,11 +135,14 @@ int main() {
     }
   }
 
-  printf("\nPrinting the parsed data\n\n");
-  for (int i = 0; i < 1999999; i++) {
-    printf("%c", bbuf[i]);
-  }
-  printf("\n\n\n");
+  printf("\nPrinting the parsed data\n");
+  // for (int i = 0; i < 1999999; i++) {
+  //   printf("%c", bbuf[i]);
+  // }
+  // printf("\n\n\n");
+
+  // TODO: FIX
+  printf("%s\n", body_elements[0].content);
 
   return 0;
 }
