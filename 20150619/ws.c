@@ -10,6 +10,14 @@
 #define SERVER_PORT 8080
 #define SOCKET_ERROR -1
 
+#define ANSI_COLOR_RED "\x1b[31m"
+#define ANSI_COLOR_GREEN "\x1b[32m"
+#define ANSI_COLOR_YELLOW "\x1b[33m"
+#define ANSI_COLOR_BLUE "\x1b[34m"
+#define ANSI_COLOR_MAGENTA "\x1b[35m"
+#define ANSI_COLOR_CYAN "\x1b[36m"
+#define ANSI_COLOR_RESET "\x1b[0m"
+
 char hbuf[10000];
 char entity[1000];
 
@@ -122,20 +130,39 @@ int main() {
       fin = fopen(filename + 1, "r");
       // if i don't find the file i return 404 file not found
       if (fin == NULL) {
-        sprintf(response, "HTTP/1.1 404 NOT FOUND\r\nConnection:close\r\n\r\n");
+        sprintf(response, "HTTP/1.1 404 NOT FOUND\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n");
         // writing the header
         write(clientfd, response, strlen(response));
         fin = fopen("404.html", "r");
       } else {
-        sprintf(response, "HTTP/1.1 200 OK\r\nConnection:close\r\n\r\n");
+        sprintf(response, "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nConnection: keep-alive\r\n\r\n");
         // writing the header
         write(clientfd, response, strlen(response));
       }
-      // writing the body
-      while (!feof(fin)) {
-        fread(entity, 1, 1000, fin);
-        write(clientfd, entity, 1000);
+
+      // move to the end of the file to determine its size and rewind the file pointer back
+      // to the beginning of the file
+      fseek(fin, 0L, SEEK_END);
+      int file_size = ftell(fin);
+      rewind(fin);
+
+      int t = -1;
+      char file_buffer[2048] = {0};
+      // fill the buffer, send to the client the amount of data in the buffer and 
+      for (int k = 0; (t = fread(file_buffer, sizeof(char), 2048, fin)) > 0; k += t) {
+        // chunk size
+        sprintf(response, "%x\r\n", t);
+        write(clientfd, response, strlen(response));
+        // chunk
+        write(clientfd, file_buffer, t);
+        // CRLF
+        sprintf(response, "\r\n");
+        write(clientfd, response, strlen(response));
       }
+      // send the empty chunk as specified in the RFC
+      sprintf(response, "0\r\n\r\n");
+      write(clientfd, response, strlen(response));
+
       fclose(fin);
       close(clientfd);
       exit(-1);
