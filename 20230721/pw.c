@@ -187,12 +187,17 @@ int main() {
         printf("%s\n", request);
         write(destinationfd, request, strlen(request));
 
+        char response_header[2000] = {0}; // this will be used if i don't have a 301
+        int response_header_size = 0;
+
         // if the response is 301 resolve it and send it to the client
         bzero(buffer, 2000);
         bzero(response_headers, 100 * sizeof(struct header));
         response_headers[0].name = buffer;
         // parsing the HTTP request to read all the headers and remove CRLFs
         for (j = 0, i = 0; read(destinationfd, buffer + i, 1); i++) {
+          response_header[i] = buffer[i];
+          response_header_size++;
           if (buffer[i] == '\n' && buffer[i - 1] == '\r') {
             buffer[i - 1] = 0;
             if (!response_headers[j].name[0]) break;
@@ -204,6 +209,10 @@ int main() {
             // printf(ANSI_COLOR_RED "TROVO ROBA" ANSI_COLOR_RESET);
           }
         }
+
+        // for (i = 0; i < j; i++) {
+        //   printf("%s --> %s\n", response_headers[i].name, response_headers[i].value);
+        // }
 
         if (strcmp(response_headers[0].name, "HTTP/1.1 301 Moved Permanently") == 0) {
           printf(ANSI_COLOR_YELLOW "Found a 301 redirect\n" ANSI_COLOR_RESET);
@@ -236,6 +245,8 @@ int main() {
                 new_filename = &location[k + 1];
               }
             }
+          } else {
+            new_filename = location;
           }
 
           printf("*******************\n");
@@ -269,12 +280,16 @@ int main() {
             write(clientfd, body_buffer, t);
           }
         } else {
+          write(clientfd, response_header, response_header_size);
+
           // write the response to the client
           while (t = read(destinationfd, buffer, 2000)) {
             write(clientfd, buffer, t);
           }
         }
         close(destinationfd);
+
+
       } else if (!strcmp("CONNECT", method)) {  // it is a connect  host:port
         printf(ANSI_COLOR_GREEN "FOUND CONNECT" ANSI_COLOR_RESET "\n");
         hostname = url;
