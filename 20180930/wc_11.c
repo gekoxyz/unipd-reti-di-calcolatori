@@ -74,8 +74,6 @@ int main() {
   FILE *cached_file;
   char request[1024] = {0};
 
-  /*
-
   if ((cached_file = fopen(cached_file_name, "r")) != NULL) {
     printf("The file is already in cache, checking the validity\n");
 
@@ -126,16 +124,9 @@ int main() {
         }
       }
 
-      printf("MUOIO");
-      // struct tm* http_time = malloc(sizeof(struct tm));
-      // strptime(last_modified, format, http_time); // string -> tm
-      // time_t epoch_remote = mktime(http_time); // tm -> epoch
-      
-      // printf("epoch Remote %lu\n", (unsigned long)epoch_remote);
-      // printf("epoch Cached %lu\n", (unsigned long)epoch_saved);
+      printf("304 not modified: serving from cache");
     }
   }
-  */
 
   int body_elements_count = 0;
 
@@ -227,26 +218,27 @@ int main() {
       }
     }
 
-    printf("\nPrinting the cached file\n");
+    printf("\nPrinting the downloaded file\n");
 
-    // cached_file = fopen(cached_file_name, "w+");
+    cached_file = fopen(cached_file_name, "w+");
 
-    // // save the timestamp in the cached file
-    // time_t unix_timestamp = time(NULL);
-    // fprintf(cached_file, "%lu\n", (unsigned long)unix_timestamp);
+    // save the timestamp in the cached file
+    time_t unix_timestamp = time(NULL);
+    fprintf(cached_file, "%lu\n", (unsigned long)unix_timestamp);
     
     printf("body_elements_count = %d\n", body_elements_count);
     
+    // printf("**************************\n");
+    // printf("%d\n", body_elements[0].chunk_size);
+    // printf("**************************\n");
+    // printf("%s\n", body_elements[0].content);
+    
     printf("**************************\n");
-    printf("%d\n", body_elements[0].chunk_size);
+    for (int l = 0; l < body_elements_count; l++) {
+      // fprintf(cached_file, "%d", body_elements[l].chunk_size);
+      fprintf(cached_file, "%s", body_elements[l].content);
+    }
     printf("**************************\n");
-    printf("%s\n", body_elements[0].content);
-    printf("**************************\n");
-
-    // for (int l = 0; l < body_elements_count; l++) {
-    //   fprintf(cached_file, "%d", body_elements[l].chunk_size);
-    //   fprintf(cached_file, "%s", body_elements[l].content);
-    // }
   }
 
   // for (int l = 0; l < body_elements_count; l++) {
