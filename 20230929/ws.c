@@ -150,11 +150,23 @@ int main() {
         fin = fopen("404.html", "r");
       } else {
         // generating the etag
-        system("md5sum index.html > ./md5out.txt");
+        FILE *md5out = popen("md5sum index.html", "r");
+        if (md5out == NULL) {
+          perror("popen");
+          return 1;
+        }
 
-        FILE *md5out = fopen("md5out.txt", "rt");
-        char etag[33] = {0};  // 33 because the md5 hash is long 32 chars
-        fgets(etag, sizeof(etag), md5out);
+        char etag[34] = {0};
+        fread(&etag[1], 1, 32, md5out);
+        etag[0] = '"';
+        etag[33] = '"';
+        etag[34] = 0;
+        printf("etag --> %s\n", etag);
+
+        // // 33 because the md5 hash is long 32 chars
+        // char tmp[33] = {0}; 
+        // snprintf(etag, sizeof(etag), "\"%32s\"", fgets(tmp, 33, md5out));
+
 
         if ((if_none_match_header_index != -1) && (strcmp(headers[if_none_match_header_index].value, etag) == 0)) {
           sprintf(response, "HTTP/1.1 304 Not Modified");
@@ -165,9 +177,10 @@ int main() {
           exit(-1);
         }
         
-        sprintf(response, "HTTP/1.1 200 OK\r\nETag:%s\r\nConnection:close\r\n\r\n", etag);
+        sprintf(response, "HTTP/1.1 200 OK\r\nETag: %s\r\nConnection: close\r\n\r\n", etag);
         // writing the header
         write(clientfd, response, strlen(response));
+        printf(ANSI_COLOR_MAGENTA"%s\n"ANSI_COLOR_RESET, response);
       }
       // writing the body
       while (!feof(fin)) {
