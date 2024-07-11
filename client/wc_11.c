@@ -50,7 +50,7 @@ int main() {
   server.sin_family = AF_INET;
   server.sin_port = htons(SERVER_PORT);
   // struct hostent *he; he = gethostbyname("gekohomelab.ddns.net");
-  struct hostent *he; he = gethostbyname("example.org");
+  struct hostent *he; he = gethostbyname("www.google.com");
   server.sin_addr.s_addr = *(unsigned int *)(he->h_addr);
 
   if (connect(my_socket, (struct sockaddr *)&server, sizeof(struct sockaddr_in)) == SOCKET_ERROR) {
@@ -59,7 +59,7 @@ int main() {
   }
 
   // writing the HTTP request
-  char *request = "GET /index.html HTTP/1.1\r\nHost: example.org\r\nConnection: close\r\n\r\n";
+  char *request = "GET /index.html HTTP/1.1\r\nHost: www.google.com\r\nConnection: close\r\n\r\n";
   // writing the request to the socket
   write(my_socket, request, strlen(request));
 
@@ -84,6 +84,8 @@ int main() {
       headers[++j].name = &hbuf[i + 1];
     }
   }
+
+  int body_elements_count = 0;
 
   char bbuf[2000000] = {0};
   int len = 0;
@@ -115,12 +117,13 @@ int main() {
         // is not hexadecimal (this means the \r) the number and get the
         // chunk length
         long size = strtol(chunk_start, NULL, 16);
+        body_elements[body_elements_count].chunk_size = size;
         printf("conversion: bbuf[%d] -> %ld\n", i, size);
         if (size == 0) break;
         // add 2 which is the \r\n so i will end up exactly at the start of the next chunk-length
         size += 2;
+        body_elements[body_elements_count++].content = &bbuf[i];
         // read all the body from the buffer
-
         for (long k = 0; k < size; k++) {
           read(my_socket, &bbuf[i + k], 1);
         }
@@ -135,14 +138,11 @@ int main() {
     }
   }
 
-  printf("\nPrinting the parsed data\n");
-  // for (int i = 0; i < 1999999; i++) {
-  //   printf("%c", bbuf[i]);
-  // }
-  // printf("\n\n\n");
-
-  // TODO: FIX
-  printf("%s\n", body_elements[0].content);
+  printf("\nprinting the parsed data\n");
+  printf("%d chunks\n\n", body_elements_count);
+  for (int k = 0; k < body_elements_count; k++) {
+    printf("%s", body_elements[k].content);
+  }
 
   return 0;
 }

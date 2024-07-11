@@ -55,7 +55,7 @@ int main() {
   server.sin_port = htons(SERVER_PORT);
   // struct hostent *he; he = gethostbyname("gekohomelab.ddns.net");
   struct hostent *he;
-  char *hostname = "example.org";
+  char *hostname = "www.google.com";
   he = gethostbyname(hostname);
   server.sin_addr.s_addr = *(unsigned int *)(he->h_addr);
 
